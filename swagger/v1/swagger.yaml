@@ -1,0 +1,536 @@
+openapi: 3.0.1
+
+info:
+  title: Restaurant Menu Management API
+  description: |
+    REST API for managing restaurants and their menu items.
+
+    ## Authentication (optional)
+    If the server has `API_KEY` environment variable set, every request must include:
+    ```
+    X-API-Key: <your-key>
+    ```
+    Click the **Authorize** button above to set your key.
+  version: v1
+
+servers:
+  - url: /
+    description: Current server (same host & port as Swagger UI)
+  - url: http://localhost:3001
+    description: Local development (port 3001)
+  - url: http://localhost:3000
+    description: Local development (port 3000)
+
+tags:
+  - name: Restaurants
+    description: Restaurant CRUD operations
+  - name: Menu Items
+    description: Menu item operations (scoped to a restaurant, or by ID)
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Somboon Seafood
+        address:
+          type: string
+          example: 169/7-12 Surawong Rd, Bang Rak, Bangkok
+        phone:
+          type: string
+          nullable: true
+          example: "+66 2 233 3104"
+        opening_hours:
+          type: string
+          nullable: true
+          example: "Mon-Sun 16:00 - 23:00"
+
+    RestaurantWithMenuItems:
+      allOf:
+        - $ref: '#/components/schemas/Restaurant'
+        - type: object
+          properties:
+            menu_items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MenuItem'
+
+    RestaurantInput:
+      type: object
+      required: [name, address]
+      properties:
+        name:
+          type: string
+          example: The Noodle House
+        address:
+          type: string
+          example: 123 Silom Rd, Bangkok
+        phone:
+          type: string
+          example: "+66 2 000 0000"
+        opening_hours:
+          type: string
+          example: "Mon-Sun 10:00 - 22:00"
+
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Tom Yum Kung
+        description:
+          type: string
+          nullable: true
+          example: Spicy prawn soup with lemongrass
+        price:
+          type: string
+          example: "320.00"
+        category:
+          type: string
+          enum: [appetizer, main, dessert, drink]
+          example: main
+        is_available:
+          type: boolean
+          example: true
+
+    MenuItemInput:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          example: Green Curry
+        description:
+          type: string
+          example: Creamy coconut green curry with chicken
+        price:
+          type: number
+          format: float
+          example: 220.00
+        category:
+          type: string
+          enum: [appetizer, main, dessert, drink]
+          example: main
+        is_available:
+          type: boolean
+          default: true
+          example: true
+
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        total_pages:
+          type: integer
+          example: 3
+        total_count:
+          type: integer
+          example: 42
+        per_page:
+          type: integer
+          example: 20
+
+    ValidationError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+          example: ["Name can't be blank", "Price must be greater than or equal to 0"]
+
+    NotFoundError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Restaurant not found
+
+    UnauthorizedError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized. Provide a valid API key via X-API-Key header."
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotFoundError'
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UnauthorizedError'
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+security:
+  - ApiKeyAuth: []
+  - {}
+
+paths:
+  # ─── Restaurants ──────────────────────────────────────────────────────────
+
+  /restaurants:
+    get:
+      summary: List all restaurants
+      tags: [Restaurants]
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of restaurants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Restaurant'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+              example:
+                data:
+                  - id: 1
+                    name: Somboon Seafood
+                    address: "169/7-12 Surawong Rd, Bang Rak, Bangkok"
+                    phone: "+66 2 233 3104"
+                    opening_hours: "Mon-Sun 16:00 - 23:00"
+                meta:
+                  current_page: 1
+                  total_pages: 1
+                  total_count: 2
+                  per_page: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create a restaurant
+      tags: [Restaurants]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [restaurant]
+              properties:
+                restaurant:
+                  $ref: '#/components/schemas/RestaurantInput'
+            example:
+              restaurant:
+                name: The Noodle House
+                address: 123 Silom Rd, Bangkok
+                phone: "+66 2 000 0000"
+                opening_hours: "Mon-Sun 10:00 - 22:00"
+      responses:
+        '201':
+          description: Restaurant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Restaurant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /restaurants/{id}:
+    get:
+      summary: Get restaurant detail (includes all menu items)
+      tags: [Restaurants]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Restaurant with menu items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RestaurantWithMenuItems'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update a restaurant
+      tags: [Restaurants]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [restaurant]
+              properties:
+                restaurant:
+                  $ref: '#/components/schemas/RestaurantInput'
+            example:
+              restaurant:
+                name: Somboon Seafood (Updated)
+                address: "169/7-12 Surawong Rd, Bang Rak, Bangkok"
+                phone: "+66 2 233 3104"
+                opening_hours: "Mon-Sun 15:00 - 23:30"
+      responses:
+        '200':
+          description: Restaurant updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Restaurant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      summary: Delete a restaurant (cascades to menu items)
+      tags: [Restaurants]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '204':
+          description: Restaurant deleted (no body)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Menu Items ───────────────────────────────────────────────────────────
+
+  /restaurants/{restaurant_id}/menu_items:
+    get:
+      summary: List menu items for a restaurant
+      tags: [Menu Items]
+      parameters:
+        - name: restaurant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: category
+          in: query
+          description: Filter by category
+          schema:
+            type: string
+            enum: [appetizer, main, dessert, drink]
+        - name: name
+          in: query
+          description: Search by name (partial match)
+          schema:
+            type: string
+          example: curry
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of menu items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MenuItem'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+              example:
+                data:
+                  - id: 1
+                    name: Tom Yum Kung
+                    description: Spicy prawn soup with lemongrass
+                    price: "320.00"
+                    category: main
+                    is_available: true
+                meta:
+                  current_page: 1
+                  total_pages: 1
+                  total_count: 5
+                  per_page: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Add a menu item to a restaurant
+      tags: [Menu Items]
+      parameters:
+        - name: restaurant_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [menu_item]
+              properties:
+                menu_item:
+                  $ref: '#/components/schemas/MenuItemInput'
+            example:
+              menu_item:
+                name: Green Curry
+                description: Creamy coconut green curry with chicken
+                price: 220.00
+                category: main
+                is_available: true
+      responses:
+        '201':
+          description: Menu item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MenuItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /menu_items/{id}:
+    put:
+      summary: Update a menu item
+      tags: [Menu Items]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [menu_item]
+              properties:
+                menu_item:
+                  $ref: '#/components/schemas/MenuItemInput'
+            example:
+              menu_item:
+                name: Tom Yum Kung (Spicy)
+                price: 350.00
+                is_available: true
+      responses:
+        '200':
+          description: Menu item updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MenuItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      summary: Delete a menu item
+      tags: [Menu Items]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '204':
+          description: Menu item deleted (no body)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
