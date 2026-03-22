@@ -2,14 +2,30 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+# Disable API key auth in all tests
+ENV["API_KEY"] = nil
+
 module ActiveSupport
   class TestCase
-    # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors, with: :threads)
-
-    # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
+  end
+end
 
-    # Add more helper methods to be used by all tests here...
+module ApiTestHelper
+  def json_headers
+    { "Content-Type" => "application/json", "Accept" => "application/json" }
+  end
+
+  def json_body
+    JSON.parse(response.body)
+  end
+
+  def post_json(path, params = {})
+    post path, params: params.to_json, headers: json_headers
+  end
+
+  def put_json(path, params = {})
+    put path, params: params.to_json, headers: json_headers
   end
 end
