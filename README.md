@@ -11,8 +11,10 @@ A REST API built with **Ruby on Rails 8.1** and **MySQL** for managing restauran
 | Framework | Ruby on Rails 8.1.2 |
 | Language | Ruby 3.4 |
 | Database | MySQL 8.x |
+| Cache | Redis 7.x |
 | Pagination | Kaminari |
 | Server | Puma |
+| API Docs | Swagger UI (rswag) |
 
 ---
 
@@ -23,6 +25,7 @@ A REST API built with **Ruby on Rails 8.1** and **MySQL** for managing restauran
 - Ruby 3.4+
 - Rails 8.1.2
 - MySQL 8.x running locally
+- Redis 7.x running locally
 - Bundler
 
 ### 1. Clone & install dependencies
@@ -50,14 +53,24 @@ Or copy `.env.example` to `.env` and fill in your values — `dotenv-rails` will
 cp .env.example .env
 ```
 
-### 3. Create and migrate the database
+### 3. Start Redis
+
+If using Docker:
+
+```bash
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+```
+
+Or if Redis is already installed locally, just make sure it's running on port `6379`.
+
+### 4. Create and migrate the database
 
 ```bash
 bin/rails db:create
 bin/rails db:migrate
 ```
 
-### 4. Seed data
+### 5. Seed data
 
 ```bash
 bin/rails db:seed
@@ -65,13 +78,27 @@ bin/rails db:seed
 
 This creates 2 restaurants (Somboon Seafood, Gaggan Anand) with 5 menu items each.
 
-### 5. Start the server
+### 6. Start the server
 
 ```bash
 bin/rails server
 ```
 
 The API is now available at `http://localhost:3000`.
+
+---
+
+## Swagger UI
+
+Interactive API documentation is available via Swagger UI. Start the server and open:
+
+```
+http://localhost:3000/api-docs
+```
+
+Click **Authorize** (top right) and enter your API key if `API_KEY` is set in `.env`.
+
+All endpoints can be tested directly from the browser — no Postman needed.
 
 ---
 
@@ -252,6 +279,31 @@ bundle exec rails test
 
 ---
 
+## Redis Caching
+
+Redis is used as the Rails cache store (`redis_cache_store`) for improved performance.
+
+| What's cached | TTL | Invalidated on |
+|---------------|-----|----------------|
+| `GET /restaurants/:id` response | 15 minutes | `PUT` or `DELETE` that restaurant |
+
+### Configure
+
+Set `REDIS_URL` in your `.env`:
+
+```
+REDIS_URL=redis://127.0.0.1:6379/0
+```
+
+### Verify Redis is working
+
+```bash
+bundle exec rails runner "Rails.cache.write('ping', 'pong'); puts Rails.cache.read('ping')"
+# => pong
+```
+
+---
+
 ## Design Decisions
 
 - **No API namespace** — endpoints match the assignment spec exactly (`/restaurants`, `/menu_items`).
@@ -259,6 +311,7 @@ bundle exec rails test
 - **Soft boolean default** — `is_available` defaults to `true` at the DB level.
 - **Idempotent seeds** — `find_or_create_by!` means `db:seed` can be run multiple times safely.
 - **Optional auth** — API key auth only activates when `API_KEY` env var is set, making local dev frictionless.
+- **Redis cache** — restaurant detail endpoint cached in Redis; cache invalidated automatically on update/delete.
 
 ---
 

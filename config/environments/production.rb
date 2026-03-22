@@ -15,6 +15,13 @@ Rails.application.configure do
   # Turn on fragment caching in view templates.
   config.action_controller.perform_caching = true
 
+  # Use Redis as cache store
+  config.cache_store = :redis_cache_store, {
+    url: ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/0"),
+    namespace: "restaurant_menu",
+    expires_in: 1.hour
+  }
+
   # Cache assets for far-future expiry since they are all digest stamped.
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 

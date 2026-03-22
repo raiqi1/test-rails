@@ -13,14 +13,16 @@ class RestaurantsController < ApplicationController
 
   # GET /restaurants/:id
   def show
-    render json: {
-      data: @restaurant.as_json(
+    data = Rails.cache.fetch("restaurant/#{@restaurant.id}", expires_in: 15.minutes) do
+      @restaurant.as_json(
         except: [:created_at, :updated_at],
         include: {
           menu_items: { except: [:created_at, :updated_at, :restaurant_id] }
         }
       )
-    }
+    end
+
+    render json: { data: data }
   end
 
   # POST /restaurants
@@ -37,6 +39,7 @@ class RestaurantsController < ApplicationController
   # PUT /restaurants/:id
   def update
     if @restaurant.update(restaurant_params)
+      Rails.cache.delete("restaurant/#{@restaurant.id}")
       render json: { data: @restaurant.as_json(except: [:created_at, :updated_at]) }
     else
       render_validation_errors(@restaurant)
@@ -45,6 +48,7 @@ class RestaurantsController < ApplicationController
 
   # DELETE /restaurants/:id
   def destroy
+    Rails.cache.delete("restaurant/#{@restaurant.id}")
     @restaurant.destroy
     head :no_content
   end

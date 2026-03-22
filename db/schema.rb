@@ -11,7 +11,17 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_03_22_000002) do
-  create_table "menu_items", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+  create_schema "extensions"
+
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "extensions.pg_stat_statements"
+  enable_extension "extensions.pgcrypto"
+  enable_extension "extensions.uuid-ossp"
+  enable_extension "graphql.pg_graphql"
+  enable_extension "pg_catalog.plpgsql"
+  enable_extension "vault.supabase_vault"
+
+  create_table "public.menu_items", force: :cascade do |t|
     t.string "category"
     t.datetime "created_at", null: false
     t.text "description"
@@ -24,7 +34,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000002) do
     t.index ["restaurant_id"], name: "index_menu_items_on_restaurant_id"
   end
 
-  create_table "restaurants", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+  create_table "public.restaurants", force: :cascade do |t|
     t.string "address", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -33,5 +43,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_22_000002) do
     t.datetime "updated_at", null: false
   end
 
-  add_foreign_key "menu_items", "restaurants"
+  add_foreign_key "public.menu_items", "public.restaurants"
+
 end
