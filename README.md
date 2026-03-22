@@ -44,7 +44,11 @@ export DB_HOST=127.0.0.1
 export DB_PORT=3306
 ```
 
-Or create a `.env` file and use a gem like `dotenv-rails` (not included by default).
+Or copy `.env.example` to `.env` and fill in your values — `dotenv-rails` will load it automatically.
+
+```bash
+cp .env.example .env
+```
 
 ### 3. Create and migrate the database
 
@@ -216,6 +220,35 @@ All list endpoints support pagination via query params:
 |-------|---------|-------------|
 | `page` | 1 | Page number |
 | `per_page` | 20 | Items per page |
+
+---
+
+## Running Tests
+
+### Setup test database
+
+```bash
+# Create the test DB (adjust credentials as needed)
+docker exec -it mysql mysql -uroot -proot -e \
+  "CREATE DATABASE restaurant_menu_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+bundle exec rails db:migrate RAILS_ENV=test
+```
+
+### Run all tests
+
+```bash
+bundle exec rails test
+```
+
+**Coverage: 45 tests, 102 assertions, 0 failures**
+
+| Test file | What's covered |
+|-----------|----------------|
+| `test/models/restaurant_test.rb` | Validations, associations, cascade delete |
+| `test/models/menu_item_test.rb` | Validations, category enum, price rules |
+| `test/controllers/restaurants_controller_test.rb` | Full CRUD, 404/422 edge cases |
+| `test/controllers/menu_items_controller_test.rb` | CRUD, category filter, name search, 404/422 |
 
 ---
 
