@@ -1,6 +1,6 @@
 # Restaurant Menu Management API
 
-A REST API built with **Ruby on Rails 8.1** and **MySQL** for managing restaurants and their menu items.
+A REST API built with **Ruby on Rails 8.1** and **PostgreSQL** for managing restaurants and their menu items.
 
 ---
 
@@ -10,7 +10,7 @@ A REST API built with **Ruby on Rails 8.1** and **MySQL** for managing restauran
 |-------|-----------|
 | Framework | Ruby on Rails 8.1.2 |
 | Language | Ruby 3.4 |
-| Database | MySQL 8.x |
+| Database | PostgreSQL (Supabase) |
 | Cache | Redis 7.x |
 | Pagination | Kaminari |
 | Server | Puma |
@@ -24,7 +24,7 @@ A REST API built with **Ruby on Rails 8.1** and **MySQL** for managing restauran
 
 - Ruby 3.4+
 - Rails 8.1.2
-- MySQL 8.x running locally
+- PostgreSQL (Supabase atau lokal)
 - Redis 7.x running locally
 - Bundler
 
@@ -53,24 +53,36 @@ Or copy `.env.example` to `.env` and fill in your values — `dotenv-rails` will
 cp .env.example .env
 ```
 
-### 3. Start Redis
+### 3. Setup database (Supabase)
 
-If using Docker:
+Buat project di [supabase.com](https://supabase.com) → ambil credentials dari **Settings → Database → Connection string**.
+
+Isi `.env`:
+```
+DB_USERNAME=postgres.xxxxxxxxxxxx
+DB_PASSWORD=your_password
+DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com
+DB_PORT=5432
+DB_NAME=postgres
+```
+
+### 4. Start Redis (opsional)
+
+Hanya dibutuhkan jika ingin mengaktifkan Redis caching. Kalau tidak di-set, otomatis fallback ke memory store.
 
 ```bash
 docker run -d --name redis -p 6379:6379 redis:7-alpine
 ```
 
-Or if Redis is already installed locally, just make sure it's running on port `6379`.
-
-### 4. Create and migrate the database
+### 5. Migrate database
 
 ```bash
-bin/rails db:create
-bin/rails db:migrate
+bundle exec rails db:migrate
 ```
 
-### 5. Seed data
+> Skip `db:create` — database sudah dibuat otomatis di Supabase.
+
+### 6. Seed data
 
 ```bash
 bin/rails db:seed
@@ -78,7 +90,7 @@ bin/rails db:seed
 
 This creates 2 restaurants (Somboon Seafood, Gaggan Anand) with 5 menu items each.
 
-### 6. Start the server
+### 7. Start the server
 
 ```bash
 bin/rails server
