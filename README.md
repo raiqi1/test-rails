@@ -109,6 +109,7 @@ http://localhost:3000/api-docs
 ```
 
 Click **Authorize** (top right) and enter your API key if `API_KEY` is set in `.env`.
+fill the authorize with this key : rahasia123
 
 All endpoints can be tested directly from the browser — no Postman needed.
 
